@@ -1,4 +1,5 @@
- 
+%% for paper "Systematic Development of an Open-Source Quadrotor Research Platform" .
+%% 
 clc
 clear
 close all
