@@ -1,0 +1,310 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>Main_magnetometer_calibration_</title><meta name="generator" content="MATLAB 9.13"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2023-09-15"><meta name="DC.source" content="Main_magnetometer_calibration_.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; }
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+span.typesection { color:#A0522D }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><pre class="codeinput">clc
+clear
+close <span class="string">all</span>
+
+<span class="comment">% Import raw magnetometer readings from a data file ( 'my_data2.txt' my data file)</span>
+
+dataFileName = <span class="string">'my_data2.txt'</span>; <span class="comment">%my_data2.txt good</span>
+<span class="comment">%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</span>
+calibrationSwitch = 0;
+
+<span class="comment">% Calibration Switch has two state:</span>
+<span class="comment">% SWITCH = 0: Calibrate to unit circle (normalization).</span>
+<span class="comment">% SWITCH = 1: Do not change the radius (scale only).</span>
+
+<span class="comment">%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</span>
+<span class="comment">% Extract uncalibrated magnetometer data</span>
+rawData  = importdata(dataFileName);
+xUncalibrated = rawData(:,1);
+yUncalibrated = rawData(:,2);
+zUncalibrated = rawData(:,3);
+
+<span class="comment">%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</span>
+<span class="comment">% Create arrays to store calibrated data</span>
+XCalibrated = zeros(length(xUncalibrated),1);
+YCalibrated = zeros(length(xUncalibrated),1);
+ZCalibrated = zeros(length(xUncalibrated),1);
+
+<span class="comment">%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</span>
+<span class="comment">% Fit an ellipsoid to the raw data:</span>
+<span class="comment">% The ellipsoid equation is ax^2 + by^2 + cz^2 + 2fyz + 2gxz + 2hxy + 2px + 2qy + 2rz + d = 0.</span>
+<span class="comment">% The vector v = [a, b, c, f, g, h, p, q, r, d]' (where k = -d).</span>
+ellipsoidParams = fit_ellipsoid(xUncalibrated,yUncalibrated,zUncalibrated);
+
+<span class="comment">% Create the matrix ellipsoidMatrix (Q) and vector offsetVector (u) from the ellipsoid parameters</span>
+
+ellipsoidMatrix = [ellipsoidParams(1),ellipsoidParams(6),ellipsoidParams(5);ellipsoidParams(6),ellipsoidParams(2),ellipsoidParams(4);ellipsoidParams(5),ellipsoidParams(4),ellipsoidParams(3)];
+offsetVector = [ellipsoidParams(7),ellipsoidParams(8),ellipsoidParams(9)]';
+kValue = ellipsoidParams(10);
+
+ <span class="comment">% Determine calibration scaling factor and radius</span>
+<span class="keyword">if</span> calibrationSwitch == 1
+     calibrationScale = 1;  <span class="comment">% Do not change the radius</span>
+     calibrationRadius = sqrt(offsetVector'*(ellipsoidMatrix\offsetVector)-kValue);
+<span class="keyword">elseif</span> calibrationSwitch == 0
+    calibrationScale = (1/sqrt(offsetVector'*(ellipsoidMatrix\offsetVector)-kValue)); <span class="comment">% Normalize to unit circle</span>
+    calibrationRadius = 1;
+<span class="keyword">end</span>
+
+<span class="comment">%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</span>
+<span class="comment">% Calculate the calibrated offset vector offsetVectorCalibrated (b) and</span>
+<span class="comment">% calibration matrix calibrationMatrix(Ainv)</span>
+offsetVectorCalibrated = - ellipsoidMatrix \ offsetVector; <span class="comment">% Eqn(21)</span>
+calibrationMatrix = real(calibrationScale*sqrt(ellipsoidMatrix)); <span class="comment">% Eqn(13) and Eqn(14)</span>
+
+<span class="comment">% Calibration Process:</span>
+<span class="comment">% For each data point, the following steps are performed:</span>
+<span class="comment">%   1. Sensor data from the raw measurements is extracted.</span>
+<span class="comment">%   2. Calibration is applied to the data using the calibration matrix.</span>
+<span class="comment">%   3. Calibrated values are stored in XCalibrated, YCalibrated, and ZCalibrated.</span>
+
+<span class="keyword">for</span> dataIter = 1:length(xUncalibrated)
+    <span class="comment">% Sensor data</span>
+    uncalibratedData = [xUncalibrated(dataIter); yUncalibrated(dataIter); zUncalibrated(dataIter)];
+
+    <span class="comment">% Apply calibration matrix and offset vector</span>
+    calibratedData = calibrationMatrix*(uncalibratedData - offsetVectorCalibrated);
+
+    <span class="comment">% Store calibrated values</span>
+    XCalibrated(dataIter) = calibratedData(1);
+    YCalibrated(dataIter) = calibratedData(2);
+    ZCalibrated(dataIter) = calibratedData(3);
+<span class="keyword">end</span>
+
+<span class="comment">% Plot uncalibrated data</span>
+subplot(1,2,1);
+plot_fitted_ellipsoid(ellipsoidParams);
+hold <span class="string">on</span>;
+
+scatter3(xUncalibrated,yUncalibrated,zUncalibrated,<span class="string">'fill'</span>,<span class="string">'MarkerFaceColor'</span>,<span class="string">'red'</span>);
+title({<span class="string">'Before magnetometer calibration'</span>,<span class="string">'(Ellipsoid fitted)'</span>});
+xlabel(<span class="string">'X-axis'</span>); ylabel(<span class="string">'Y-axis'</span>); zlabel(<span class="string">'Z-axis'</span>);
+axis <span class="string">equal</span>;
+
+<span class="comment">% Plot calibrated data</span>
+subplot(1,2,2);
+plot_sphere_shape([0,0,0],calibrationRadius);
+hold <span class="string">on</span>;
+
+scatter3(XCalibrated,YCalibrated,ZCalibrated,<span class="string">'fill'</span>,<span class="string">'MarkerFaceColor'</span>,<span class="string">'blue'</span>);
+<span class="keyword">if</span> calibrationSwitch == 0
+    title({<span class="string">'After magnetometer calibration'</span>,<span class="string">'(Normalized to unit circle)'</span>});
+<span class="keyword">else</span>
+    title({<span class="string">'After magnetometer calibration'</span>});
+<span class="keyword">end</span>
+xlabel(<span class="string">'X-axis'</span>); ylabel(<span class="string">'Y-axis'</span>); zlabel(<span class="string">'Z-axis'</span>);
+axis <span class="string">equal</span>;
+
+<span class="comment">% Print calibration matrices</span>
+fprintf(<span class="string">'3D magnetometer calibration via ellipsoid fitting'</span>);
+fprintf(<span class="string">'\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'</span>);
+fprintf(<span class="string">'\nThe Calibration Equation to be Applied:'</span>)
+fprintf(<span class="string">'\n\t\t\t\th_calibrated = CalibrationMatrix * (h_uncalibrated - OffsetVector) \nWhere,'</span>)
+fprintf(<span class="string">'\nh_uncalibrated   = Measured sensor data vector'</span>);
+fprintf(<span class="string">'\nh_hat = Vector of Calibrated Sensor Data'</span>);
+fprintf(<span class="string">'\nh_calibrated = Vector of Calibrated Sensor Data'</span>);
+fprintf(<span class="string">'\n\nCalibrationMatrix =\n'</span>); disp(calibrationMatrix);
+fprintf(<span class="string">'\nOffsetVector =\n'</span>); disp(offsetVectorCalibrated);
+</pre><pre class="codeoutput">3D magnetometer calibration via ellipsoid fitting
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The Calibration Equation to be Applied:
+				h_calibrated = CalibrationMatrix * (h_uncalibrated - OffsetVector) 
+Where,
+h_uncalibrated   = Measured sensor data vector
+h_hat = Vector of Calibrated Sensor Data
+h_calibrated = Vector of Calibrated Sensor Data
+
+CalibrationMatrix =
+    0.0020         0         0
+         0    0.0020         0
+         0         0    0.0020
+
+
+OffsetVector =
+  -84.7818
+  -48.6638
+   -7.3369
+
+</pre><img vspace="5" hspace="5" src="Main_magnetometer_calibration__01.png" alt=""> <p class="footer"><br><a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2022b</a><br></p></div><!--
+##### SOURCE BEGIN #####
+ 
+clc
+clear
+close all
+
+% Import raw magnetometer readings from a data file ( 'my_data2.txt' my data file)
+
+dataFileName = 'my_data2.txt'; %my_data2.txt good 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+calibrationSwitch = 0; 
+
+% Calibration Switch has two state:
+% SWITCH = 0: Calibrate to unit circle (normalization).
+% SWITCH = 1: Do not change the radius (scale only).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Extract uncalibrated magnetometer data
+rawData  = importdata(dataFileName);
+xUncalibrated = rawData(:,1); 
+yUncalibrated = rawData(:,2); 
+zUncalibrated = rawData(:,3);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Create arrays to store calibrated data
+XCalibrated = zeros(length(xUncalibrated),1); 
+YCalibrated = zeros(length(xUncalibrated),1); 
+ZCalibrated = zeros(length(xUncalibrated),1);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Fit an ellipsoid to the raw data:
+% The ellipsoid equation is ax^2 + by^2 + cz^2 + 2fyz + 2gxz + 2hxy + 2px + 2qy + 2rz + d = 0.
+% The vector v = [a, b, c, f, g, h, p, q, r, d]' (where k = -d).
+ellipsoidParams = fit_ellipsoid(xUncalibrated,yUncalibrated,zUncalibrated); 
+
+% Create the matrix ellipsoidMatrix (Q) and vector offsetVector (u) from the ellipsoid parameters
+
+ellipsoidMatrix = [ellipsoidParams(1),ellipsoidParams(6),ellipsoidParams(5);ellipsoidParams(6),ellipsoidParams(2),ellipsoidParams(4);ellipsoidParams(5),ellipsoidParams(4),ellipsoidParams(3)];
+offsetVector = [ellipsoidParams(7),ellipsoidParams(8),ellipsoidParams(9)]';
+kValue = ellipsoidParams(10);
+
+ % Determine calibration scaling factor and radius 
+if calibrationSwitch == 1
+     calibrationScale = 1;  % Do not change the radius
+     calibrationRadius = sqrt(offsetVector'*(ellipsoidMatrix\offsetVector)-kValue);
+elseif calibrationSwitch == 0
+    calibrationScale = (1/sqrt(offsetVector'*(ellipsoidMatrix\offsetVector)-kValue)); % Normalize to unit circle
+    calibrationRadius = 1;
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Calculate the calibrated offset vector offsetVectorCalibrated (b) and
+% calibration matrix calibrationMatrix(Ainv)
+offsetVectorCalibrated = - ellipsoidMatrix \ offsetVector; % Eqn(21)
+calibrationMatrix = real(calibrationScale*sqrt(ellipsoidMatrix)); % Eqn(13) and Eqn(14) 
+    
+% Calibration Process:
+% For each data point, the following steps are performed:
+%   1. Sensor data from the raw measurements is extracted.
+%   2. Calibration is applied to the data using the calibration matrix.
+%   3. Calibrated values are stored in XCalibrated, YCalibrated, and ZCalibrated.
+
+for dataIter = 1:length(xUncalibrated)
+    % Sensor data
+    uncalibratedData = [xUncalibrated(dataIter); yUncalibrated(dataIter); zUncalibrated(dataIter)]; 
+    
+    % Apply calibration matrix and offset vector
+    calibratedData = calibrationMatrix*(uncalibratedData - offsetVectorCalibrated);
+    
+    % Store calibrated values
+    XCalibrated(dataIter) = calibratedData(1);
+    YCalibrated(dataIter) = calibratedData(2);
+    ZCalibrated(dataIter) = calibratedData(3);
+end
+    
+% Plot uncalibrated data
+subplot(1,2,1);
+plot_fitted_ellipsoid(ellipsoidParams); 
+hold on;
+
+scatter3(xUncalibrated,yUncalibrated,zUncalibrated,'fill','MarkerFaceColor','red');
+title({'Before magnetometer calibration','(Ellipsoid fitted)'});
+xlabel('X-axis'); ylabel('Y-axis'); zlabel('Z-axis');
+axis equal;
+
+% Plot calibrated data
+subplot(1,2,2);
+plot_sphere_shape([0,0,0],calibrationRadius);
+hold on;
+
+scatter3(XCalibrated,YCalibrated,ZCalibrated,'fill','MarkerFaceColor','blue');
+if calibrationSwitch == 0
+    title({'After magnetometer calibration','(Normalized to unit circle)'});
+else
+    title({'After magnetometer calibration'});
+end
+xlabel('X-axis'); ylabel('Y-axis'); zlabel('Z-axis');
+axis equal;
+
+% Print calibration matrices
+fprintf('3D magnetometer calibration via ellipsoid fitting');
+fprintf('\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
+fprintf('\nThe Calibration Equation to be Applied:') 
+fprintf('\n\t\t\t\th_calibrated = CalibrationMatrix * (h_uncalibrated - OffsetVector) \nWhere,')
+fprintf('\nh_uncalibrated   = Measured sensor data vector');
+fprintf('\nh_hat = Vector of Calibrated Sensor Data');
+fprintf('\nh_calibrated = Vector of Calibrated Sensor Data');
+fprintf('\n\nCalibrationMatrix =\n'); disp(calibrationMatrix);
+fprintf('\nOffsetVector =\n'); disp(offsetVectorCalibrated);
+ 
+ 
+##### SOURCE END #####
+--></body></html>
